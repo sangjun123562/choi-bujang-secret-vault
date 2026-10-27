@@ -1,60 +1,55 @@
 /**
  * 3단계 공격 점검 스크립트
- * 비로그인 또는 위조 토큰을 통한 보호 API 접근을 차단하는지 검증합니다.
+ * bundle.mjs 규격: { attackId, expected, observed } 형태의 배열 반환
  */
-export async function runAttackChecks({ appUrl, sampleMarker } = {}) {
-  const targetUrl = (appUrl || '').replace(/\/+$/, '');
+export async function runAttackChecks(config = {}) {
+  const targetUrl = (config.publicAppUrl || '').replace(/\/+$/, '');
   const apiUrl = `${targetUrl}/api/memos`;
 
-  // 1. 토큰 없이 요청 시 차단 (401 또는 403 응답 여부 확인)
+  const results = [];
+
+  // 점검 1: 토큰 없이 보호 API 요청 시 401/403 차단 여부
   try {
     const unauthRes = await fetch(apiUrl, {
       method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      }
+      headers: { 'Accept': 'application/json' },
     });
-
-    if (unauthRes.status !== 401 && unauthRes.status !== 403) {
-      return {
-        passed: false,
-        reason: `비인증 요청에 대해 401 또는 403이 아닌 ${unauthRes.status} 상태 코드를 반환했습니다.`
-      };
-    }
+    results.push({
+      attackId: 'unauthenticated-access-blocked',
+      expected: 'HTTP 401 or 403 Forbidden/Unauthorized',
+      observed: `HTTP ${unauthRes.status} received`,
+    });
   } catch (error) {
-    return {
-      passed: false,
-      reason: `비인증 보호 API 요청 중 오류 발생: ${error.message}`
-    };
+    results.push({
+      attackId: 'unauthenticated-access-blocked',
+      expected: 'HTTP 401 or 403 Forbidden/Unauthorized',
+      observed: `Network request error: ${error.message.slice(0, 100)}`,
+    });
   }
 
-  // 2. 위조된/잘못된 Bearer 토큰 요청 시 차단
+  // 점검 2: 위조된 토큰으로 보호 API 요청 시 차단 여부
   try {
     const fakeTokenRes = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Authorization': 'Bearer invalid.forged.jwt-token',
-        'Accept': 'application/json'
-      }
+        'Accept': 'application/json',
+      },
     });
-
-    if (fakeTokenRes.status !== 401 && fakeTokenRes.status !== 403) {
-      return {
-        passed: false,
-        reason: `위조 토큰 요청에 대해 401 또는 403이 아닌 ${fakeTokenRes.status} 상태 코드를 반환했습니다.`
-      };
-    }
+    results.push({
+      attackId: 'forged-token-access-blocked',
+      expected: 'HTTP 401 or 403 Forbidden/Unauthorized',
+      observed: `HTTP ${fakeTokenRes.status} received`,
+    });
   } catch (error) {
-    return {
-      passed: false,
-      reason: `위조 토큰 API 요청 중 오류 발생: ${error.message}`
-    };
+    results.push({
+      attackId: 'forged-token-access-blocked',
+      expected: 'HTTP 401 or 403 Forbidden/Unauthorized',
+      observed: `Network request error: ${error.message.slice(0, 100)}`,
+    });
   }
 
-  return {
-    passed: true,
-    summary: '비로그인 및 위조 토큰에 대한 3단계 접근 차단 점검을 통과했습니다.'
-  };
+  return results;
 }
 
 export default runAttackChecks;
