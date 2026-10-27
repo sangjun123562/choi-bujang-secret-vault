@@ -2,7 +2,7 @@
  * 3단계 공격 점검 스크립트
  * 비로그인 또는 위조 토큰을 통한 보호 API 접근을 차단하는지 검증합니다.
  */
-export async function runAttackCheck({ appUrl, sampleMarker } = {}) {
+export async function runAttackChecks({ appUrl, sampleMarker } = {}) {
   const targetUrl = (appUrl || '').replace(/\/+$/, '');
   const apiUrl = `${targetUrl}/api/memos`;
 
@@ -57,4 +57,4 @@ export async function runAttackCheck({ appUrl, sampleMarker } = {}) {
   };
 }
 
-export default runAttackCheck;
+export default runAttackChecks;
