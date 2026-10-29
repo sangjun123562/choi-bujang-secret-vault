@@ -1,7 +1,7 @@
 {
-  "step": 2,
+  "step": 5,
   "repoUrl": "https://github.com/sangjun123562/choi-bujang-secret-vault",
-  "publicAppUrl": "https://choi-bujang-secret-vault-m3ka2rq78-sangjun123562.vercel.app/",
+  "publicAppUrl": "https://choi-bujang-secret-vault-murex-rho.vercel.app",
   "sampleMarker": "SAMPLE_NOTE_1",
   "judgeIssuer": "https://aleph-judge-production.up.railway.app/defense/judge",
   "identityProvider": {
@@ -18,6 +18,6 @@
     "DELETE /api/memos",
     "DELETE /api/memos/:id"
   ],
-  "originalApiUrl": null,
-  "restoreRoute": null
+  "originalApiUrl": "https://bpccctufaegnzlmoccpx.supabase.co/rest/v1/memos",
+  "restoreRoute": "/api/memos"
 }
