@@ -10,8 +10,13 @@
     "audience": "authenticated"
   },
   "allowedRoutes": [
-    "/api/memos",
-    "/api/memos/:id"
+    "GET /api/memos",
+    "GET /api/memos/:id",
+    "POST /api/memos",
+    "PUT /api/memos",
+    "PUT /api/memos/:id",
+    "DELETE /api/memos",
+    "DELETE /api/memos/:id"
   ],
   "originalApiUrl": null,
   "restoreRoute": null

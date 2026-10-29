@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // 1. Authorization 헤더 검증 (심판 또는 학생 토큰)
+  // 1. Authorization 헤더 검증
   const authHeader = req.headers.authorization || req.headers.Authorization;
   if (!authHeader) {
     return res.status(401).json({ error: '인증 토큰이 누락되었습니다.' });
@@ -43,6 +43,7 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: '유효하지 않거나 만료된 토큰입니다.' });
   }
 
+  const currentUserId = session.userId;
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
 
@@ -59,10 +60,10 @@ export default async function handler(req, res) {
   const { id } = req.query;
 
   try {
-    // 1) GET: 목록 조회 또는 단건 조회
+    // 1) GET: 본인 메모 목록 또는 본인 소유의 단건 조회
     if (method === 'GET') {
       if (id) {
-        // 단건 GET (/api/memos?id=...)
+        // 단건 GET: 메모 존재 여부 및 소유자 확인
         const response = await fetch(`${supabaseUrl}/rest/v1/memos?id=eq.${id}&select=*`, {
           headers: supabaseHeaders,
         });
@@ -71,32 +72,38 @@ export default async function handler(req, res) {
           return res.status(404).json({ error: '메모를 찾을 수 없습니다.' });
         }
         const item = rows[0];
+        if (item.owner_id !== currentUserId) {
+          return res.status(403).json({ error: '다른 사용자의 메모를 조회할 수 없습니다.' });
+        }
         return res.status(200).json({
           id: item.id,
           title: item.title,
-          body: item.content ?? item.body,
+          body: item.content ?? item.body ?? '',
         });
       } else {
-        // 목록 GET (/api/memos)
-        const response = await fetch(`${supabaseUrl}/rest/v1/memos?select=*`, {
+        // 목록 GET: 본인 소유(owner_id == currentUserId) 메모만 조회
+        const response = await fetch(`${supabaseUrl}/rest/v1/memos?owner_id=eq.${currentUserId}&select=*`, {
           headers: supabaseHeaders,
         });
         const rows = await response.json();
-        return res.status(200).json({ notes: rows });
+        const mappedNotes = (rows || []).map(r => ({
+          id: r.id,
+          title: r.title,
+          body: r.content ?? r.body ?? '',
+        }));
+        return res.status(200).json({ notes: mappedNotes });
       }
     }
 
-    // 2) POST: 새 메모 생성
+    // 2) POST: 새 메모 생성 (URL/본문의 owner_id는 무시하고 토큰의 userId로 강제 저장)
     if (method === 'POST') {
       const bodyData = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const { id: reqId, title, body } = bodyData || {};
+      const { title, body } = bodyData || {};
 
-      const newId = reqId || crypto.randomUUID();
       const insertPayload = {
-        id: newId,
         title: title || '무제',
         content: body || '',
-        owner_id: session.userId,
+        owner_id: currentUserId,
       };
 
       const response = await fetch(`${supabaseUrl}/rest/v1/memos`, {
@@ -112,23 +119,43 @@ export default async function handler(req, res) {
         return res.status(response.status).json({ error: '메모 생성 실패' });
       }
 
-      return res.status(201).json({ id: newId });
+      const created = await response.json();
+      const newMemo = created[0];
+      return res.status(201).json({
+        id: newMemo.id,
+        title: newMemo.title,
+        body: newMemo.content ?? newMemo.body ?? '',
+      });
     }
 
-    // 3) PUT: 메모 수정 (/api/memos?id=...)
+    // 3) PUT: 메모 수정 (기존 행 소유자 확인 및 본인만 수정 허용)
     if (method === 'PUT') {
       if (!id) {
         return res.status(400).json({ error: '수정할 메모의 ID가 필요합니다.' });
       }
 
+      // 기존 메모 소유권 확인
+      const checkResp = await fetch(`${supabaseUrl}/rest/v1/memos?id=eq.${id}&select=*`, {
+        headers: supabaseHeaders,
+      });
+      const checkRows = await checkResp.json();
+      if (!checkRows || checkRows.length === 0) {
+        return res.status(404).json({ error: '메모를 찾을 수 없습니다.' });
+      }
+      if (checkRows[0].owner_id !== currentUserId) {
+        return res.status(403).json({ error: '다른 사용자의 메모를 수정할 수 없습니다.' });
+      }
+
       const bodyData = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
       const { title, body } = bodyData || {};
 
-      const updatePayload = {};
+      const updatePayload = {
+        owner_id: currentUserId, // 소유자 변조 방지 (본인 고정)
+      };
       if (title !== undefined) updatePayload.title = title;
       if (body !== undefined) updatePayload.content = body;
 
-      const response = await fetch(`${supabaseUrl}/rest/v1/memos?id=eq.${id}`, {
+      const response = await fetch(`${supabaseUrl}/rest/v1/memos?id=eq.${id}&owner_id=eq.${currentUserId}`, {
         method: 'PATCH',
         headers: {
           ...supabaseHeaders,
@@ -141,16 +168,34 @@ export default async function handler(req, res) {
         return res.status(response.status).json({ error: '메모 수정 실패' });
       }
 
-      return res.status(200).json({ id, title, body });
+      const updated = await response.json();
+      const item = updated[0];
+      return res.status(200).json({
+        id: item.id,
+        title: item.title,
+        body: item.content ?? item.body ?? '',
+      });
     }
 
-    // 4) DELETE: 메모 삭제 (/api/memos?id=...)
+    // 4) DELETE: 메모 삭제 (기존 행 소유자 확인 후 본인만 삭제 허용)
     if (method === 'DELETE') {
       if (!id) {
         return res.status(400).json({ error: '삭제할 메모의 ID가 필요합니다.' });
       }
 
-      const response = await fetch(`${supabaseUrl}/rest/v1/memos?id=eq.${id}`, {
+      // 기존 메모 소유권 확인
+      const checkResp = await fetch(`${supabaseUrl}/rest/v1/memos?id=eq.${id}&select=*`, {
+        headers: supabaseHeaders,
+      });
+      const checkRows = await checkResp.json();
+      if (!checkRows || checkRows.length === 0) {
+        return res.status(404).json({ error: '메모를 찾을 수 없습니다.' });
+      }
+      if (checkRows[0].owner_id !== currentUserId) {
+        return res.status(403).json({ error: '다른 사용자의 메모를 삭제할 수 없습니다.' });
+      }
+
+      const response = await fetch(`${supabaseUrl}/rest/v1/memos?id=eq.${id}&owner_id=eq.${currentUserId}`, {
         method: 'DELETE',
         headers: supabaseHeaders,
       });
