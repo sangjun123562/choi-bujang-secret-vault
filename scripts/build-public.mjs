@@ -6,7 +6,7 @@ const root = resolve(import.meta.dirname, '..');
 const config = JSON.parse(await readFile(resolve(root, 'aleph.config.json'), 'utf8'));
 
 // 2단계 검증
-if (config.step !== 2) {
+if (config.step < 2) {
   throw new Error('현재 단계 설정이 올바르지 않습니다. (step: 2 필요)');
 }
 
