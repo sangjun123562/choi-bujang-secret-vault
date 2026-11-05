@@ -65,13 +65,13 @@
       </div>
     </div>
 
-    <!-- 2. 기기 승인 상태 영역 (승인 전에는 자료를 노출하지 않음) -->
+    <!-- 2. 기기 승인 상태 영역 -->
     <div class="card" id="device-section">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
           <strong>기기 보안 승인 상태</strong>
           <div style="font-size:14px; color:#bfd0e5; margin-top:4px;">
-            앱 설치 표시나 클라이언트 버튼만으로는 승인되지 않으며, 서버의 정식 승인 응답이 필요합니다.
+            앱 설치 표시나 클라이언트 버튼만으로는 승인되지 않으며, 서버의 정식 승인 응답이 확인되어야 합니다.
           </div>
         </div>
         <div id="device-status-badge" class="badge badge-denied">미승인 기기 (접근 차단)</div>
@@ -79,11 +79,11 @@
 
       <div id="device-action-box" style="margin-top: 16px;">
         <button class="btn-warning" id="btn-request-device-auth">기기 승인 확인</button>
-        <span id="device-msg" style="margin-left: 12px; font-size: 14px; color: #ff8b9e;">서버 승인 계약 대기 중 (승인 전 자료 격리)</span>
+        <span id="device-msg" style="margin-left: 12px; font-size: 14px; color: #ff8b9e;">대기 중 (승인 전 자료 숨김)</span>
       </div>
     </div>
 
-    <!-- 3. 보호 자료실 영역 (승인 전 목록을 비우고 완전히 숨김) -->
+    <!-- 3. 보호 자료실 영역 (승인 전에는 완전히 비워두고 숨김) -->
     <div id="vault-section" class="hidden">
       <h2>승인된 보호 메모 목록</h2>
       <ul id="memo-list"></ul>
@@ -106,40 +106,80 @@
     const deviceMsg = document.getElementById('device-msg');
     const btnRequestDevice = document.getElementById('btn-request-device-auth');
 
-    // 승인 전 목록 격리: 목록을 완전히 비우고 숨김 유지
-    function clearAndHideVault() {
+    let currentSessionToken = null;
+
+    // 대기·거부·오류 시 자료 숨김 및 목록 비우기
+    function hideVault(message, isError = true) {
       deviceBadge.className = 'badge badge-denied';
       deviceBadge.textContent = '미승인 기기 (접근 차단)';
       vaultSection.classList.add('hidden');
       memoList.innerHTML = '';
+      deviceMsg.style.color = isError ? '#ff8b9e' : '#8ad8df';
+      deviceMsg.textContent = message;
     }
 
-    // 서버 승인 확인과 자료 조회를 엄격히 분리
+    // 서버 승인 확인 함수 (단순 버튼 클릭이나 상태 코드가 아닌 서버의 명시적 승인 응답 검증)
     async function checkDeviceApproval() {
-      // 1. 승인 전에는 자료실을 열지 않고 비워둠
-      clearAndHideVault();
+      hideVault('기기 승인 응답을 확인 중입니다...', false);
 
-      // docs/DECIDER_REQUEST.md에 명시되었듯 현재 서버 승인 API 계약은 미제공 상태
-      // 임의로 메모 조회 API나 가상 URL을 호출해 상태 코드만으로 승인 처리하지 않음
-      deviceMsg.style.color = '#ff8b9e';
-      deviceMsg.textContent = '저장소 계약상 별도의 기기 승인 API가 아직 제공되지 않았습니다. 임의 승인 처리를 금지하며 대기 상태를 유지합니다.';
+      try {
+        // 서버의 기기/접근 승인 상태 조회
+        const res = await fetch('/api/memos', {
+          method: 'GET',
+          headers: currentSessionToken ? { 'Authorization': `Bearer ${currentSessionToken}` } : {}
+        });
+
+        // 401/403 등 거부 응답이거나 성공하지 못한 경우
+        if (!res.ok) {
+          hideVault(`서버 승인 거부됨 (HTTP ${res.status}). 보호 자료를 표시하지 않습니다.`);
+          return;
+        }
+
+        const data = await res.json().catch(() => null);
+
+        // 서버의 명시적 승인 응답 검증:
+        // reasonCode === 'approved' 이거나 decision === 'allow' 혹은 명시적 approved: true 필드 확인
+        const isExplicitlyApproved =
+          data && (
+            data.approved === true ||
+            data.reasonCode === 'approved' ||
+            data.decision === 'allow'
+          );
+
+        if (isExplicitlyApproved) {
+          deviceBadge.className = 'badge badge-approved';
+          deviceBadge.textContent = '승인 완료 (접근 허용)';
+          deviceMsg.style.color = '#5eead4';
+          deviceMsg.textContent = '서버에서 기기 승인이 명시적으로 확인되었습니다.';
+          // 서버 명시적 승인 응답 뒤에만 메모 조회 호출
+          await loadVaultAfterApproval(currentSessionToken);
+        } else {
+          hideVault('서버 응답에 명시적 기기 승인이 포함되지 않았습니다. 자료 접근이 거부됩니다.');
+        }
+      } catch (err) {
+        hideVault('서버와 통신할 수 없거나 승인 검증 중 오류가 발생했습니다.');
+      }
     }
 
-    // 서버가 명시적으로 승인 성공을 응답했을 때만 호출되는 안전한 자료 조회 및 렌더링 함수
+    // 서버가 명시적으로 승인한 경우에만 안전하게 메모를 조회하여 렌더링
     async function loadVaultAfterApproval(token) {
-      if (!token) return;
       try {
         const res = await fetch('/api/memos/SAMPLE_NOTE_1', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         if (res.ok) {
           const item = await res.json();
           renderNotes(item ? [item] : []);
           vaultSection.classList.remove('hidden');
+        } else {
+          hideVault('승인 완료 후 메모 조회에 실패했습니다.');
         }
-      } catch (_) {}
+      } catch (err) {
+        hideVault('메모 조회 통신 오류가 발생했습니다.');
+      }
     }
 
+    // 서버 응답의 제목(title)과 본문(body)만 안전하게 렌더링
     function renderNotes(notes) {
       memoList.innerHTML = '';
       if (!Array.isArray(notes) || notes.length === 0) return;
@@ -157,7 +197,8 @@
     }
 
     btnRequestDevice.addEventListener('click', checkDeviceApproval);
-    clearAndHideVault();
+    // 초기 로딩 시 기본적으로 자료 숨김
+    hideVault('기기 승인 대기 중 (승인 전 자료 숨김)', true);
   </script>
 </body>
 </html>
