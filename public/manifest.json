@@ -1,0 +1,16 @@
+{
+  "name": "최 부장의 비밀 자료실",
+  "short_name": "비밀자료실",
+  "description": "승인된 기기 전용 보안 설치형 웹앱 자료실",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101a28",
+  "theme_color": "#101a28",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%233ecf8e'/><text x='50%' y='55%' font-size='50' font-weight='bold' fill='%23101a28' text-anchor='middle' dominant-baseline='middle'>V</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

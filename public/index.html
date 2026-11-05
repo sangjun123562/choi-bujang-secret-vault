@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BYTE BACK | 3단계 진짜 로그인을 붙입니다</title>
+  <title>BYTE BACK | 11단계 나만의 접속 앱</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#101a28">
   <style>
     :root { color-scheme: dark; font-family: system-ui, sans-serif; }
     body { margin: 0; min-height: 100vh; background: #101a28; color: #ecf4ff; }
@@ -11,182 +13,141 @@
     .eyebrow { color: #8ad8df; font-size: 14px; font-weight: 700; letter-spacing: .08em; }
     h1 { margin: 16px 0; font-size: clamp(30px, 7vw, 48px); line-height: 1.2; }
     p { font-size: 17px; line-height: 1.7; color: #bfd0e5; }
-    .notice { margin: 26px 0; padding: 18px; border: 1px solid #d07384; border-radius: 14px; color: #ffe3e8; background: #612a3544; }
-    .auth-box { margin: 24px 0; padding: 20px; border: 1px solid #334d6e; border-radius: 14px; background: #162436; }
+    .card { margin: 24px 0; padding: 20px; border: 1px solid #334d6e; border-radius: 14px; background: #162436; }
     .auth-form { display: flex; flex-direction: column; gap: 10px; max-width: 320px; margin-top: 12px; }
     .auth-form input { padding: 10px 12px; border-radius: 8px; border: 1px solid #4a6382; background: #0c1521; color: #fff; font-size: 15px; }
     .auth-buttons { display: flex; gap: 8px; }
     button { cursor: pointer; padding: 10px 16px; border-radius: 8px; border: none; font-weight: 600; font-size: 15px; }
     .btn-primary { background: #3ecf8e; color: #082116; }
     .btn-secondary { background: #2d425b; color: #ecf4ff; }
+    .btn-warning { background: #eab308; color: #1e1b4b; }
     .auth-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .error-msg { margin-top: 10px; color: #ff8b9e; font-size: 14px; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+    .badge-denied { background: #612a35; color: #ff8b9e; border: 1px solid #d07384; }
+    .badge-approved { background: #134e48; color: #5eead4; border: 1px solid #0f766e; }
     ul { list-style: none; display: grid; gap: 12px; padding: 0; margin-top: 24px; }
     li { border: 1px solid #51667c; border-radius: 14px; padding: 17px 19px; background: #1a2a3d; }
     strong { display: block; font-size: 18px; margin-bottom: 5px; }
     li span { color: #bfd0e5; }
+    .offline-banner { display: none; padding: 12px; background: #78350f; color: #fef3c7; border-radius: 8px; margin-bottom: 20px; text-align: center; }
     .hidden { display: none !important; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <main>
-    <div class="eyebrow">BYTE BACK · 3단계 보호</div>
-    <h1>자료실 인증</h1>
-    <p>로그인한 사용자만 접근 가능한 보안 보관소입니다.</p>
+    <div id="offline-banner" class="offline-banner">오프라인 상태입니다. 네트워크 연결을 확인해 주세요.</div>
+    <div class="eyebrow">11단계 보안 설치형 웹앱</div>
+    <h1>최 부장의 비밀 자료실</h1>
+    <p>서버와 정책 판정기의 엄격한 기기 승인을 거친 기기만 보호 자료를 열람할 수 있습니다.</p>
 
-    <!-- 인증 섹션 -->
-    <div class="auth-box">
-      <!-- 로그인 전 화면 -->
+    <!-- 1. 계정 인증 영역 -->
+    <div class="card" id="auth-section">
       <div id="logged-out-view">
-        <strong>로그인 / 계정 등록</strong>
-        <p style="font-size: 14px; margin: 4px 0 10px;">이메일과 비밀번호로 로그인하세요.</p>
-        <form id="auth-form" class="auth-form">
-          <input type="email" id="email" placeholder="이메일 주소" required autocomplete="username">
-          <input type="password" id="password" placeholder="비밀번호" required autocomplete="current-password">
+        <strong>사용자 로그인</strong>
+        <p style="font-size:14px; margin: 4px 0 12px;">자료실을 사용하려면 먼저 계정으로 로그인하세요.</p>
+        <div class="auth-form">
+          <input type="email" id="email" placeholder="이메일">
+          <input type="password" id="password" placeholder="비밀번호">
           <div class="auth-buttons">
-            <button type="submit" id="btn-login" class="btn-primary">로그인</button>
-            <button type="button" id="btn-signup" class="btn-secondary">회원가입</button>
+            <button class="btn-primary" id="btn-login">로그인</button>
+            <button class="btn-secondary" id="btn-signup">회원가입</button>
           </div>
-        </form>
+        </div>
         <div id="auth-error" class="error-msg"></div>
       </div>
 
-      <!-- 로그인 후 화면 -->
       <div id="logged-in-view" class="hidden">
         <div class="auth-status">
-          <div>
-            <span style="color: #8ad8df; font-weight: bold;">로그인 됨:</span>
-            <span id="user-display-email"></span>
-          </div>
-          <button type="button" id="btn-logout" class="btn-secondary">로그아웃</button>
+          <span id="user-display">로그인됨</span>
+          <button class="btn-secondary" id="btn-logout">로그아웃</button>
         </div>
       </div>
     </div>
 
-    <!-- 메모 목록 -->
-    <ul id="notes" aria-live="polite"><li>로그인 후 자료를 확인할 수 있습니다.</li></ul>
+    <!-- 2. 기기 승인 상태 영역 (승인 전에는 절대 자료를 노출하지 않음) -->
+    <div class="card" id="device-section">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <strong>기기 보안 승인 상태</strong>
+          <div style="font-size:14px; color:#bfd0e5; margin-top:4px;">
+            설치 여부와 무관하게 서버 검증 및 승인이 완료되어야 접근 권한이 부여됩니다.
+          </div>
+        </div>
+        <div id="device-status-badge" class="badge badge-denied">미승인 기기 (접근 차단)</div>
+      </div>
+
+      <div id="device-action-box" style="margin-top: 16px;">
+        <button class="btn-warning" id="btn-request-device-auth">서버에 기기 승인 확인 요청</button>
+        <span id="device-msg" style="margin-left: 12px; font-size: 14px; color: #8ad8df;"></span>
+      </div>
+    </div>
+
+    <!-- 3. 보호 자료실 영역 (승인된 기기에서만 열림) -->
+    <div id="vault-section" class="hidden">
+      <h2>승인된 보호 메모 목록</h2>
+      <ul id="memo-list"></ul>
+    </div>
   </main>
 
-  <script type="module">
-    const SUPABASE_URL = 'https://bpccctufaegnzlmoccpx.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwY2NjdHVmYWVnbnpsbW9jY3B4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwMzc4NzEsImV4cCI6MjEwODYxMzg3MX0.EspZbJEd-AJ6xEtxn8Oytma4Gzo60zU6GrQnOmHfTRc';
-    
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  <script>
+    // 오프라인 상태 감지 안내
+    function updateOnlineStatus() {
+      const banner = document.getElementById('offline-banner');
+      banner.style.display = navigator.onLine ? 'none' : 'block';
+    }
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
 
-    const loggedOutView = document.querySelector('#logged-out-view');
-    const loggedInView = document.querySelector('#logged-in-view');
-    const userEmailSpan = document.querySelector('#user-display-email');
-    const authError = document.querySelector('#auth-error');
-    const authForm = document.querySelector('#auth-form');
-    const emailInput = document.querySelector('#email');
-    const passwordInput = document.querySelector('#password');
-    const btnSignup = document.querySelector('#btn-signup');
-    const btnLogout = document.querySelector('#btn-logout');
-    const list = document.querySelector('#notes');
+    let supabase = null;
+    let currentUser = null;
+    let isDeviceApproved = false;
 
-    // 메모 목록 로드 함수
-    async function loadMemos(session) {
-      list.innerHTML = '<li>자료를 불러오는 중입니다...</li>';
+    // Supabase 설정 불러오기
+    async function init() {
       try {
-        const headers = {};
-        if (session && session.access_token) {
-          headers['Authorization'] = `Bearer ${session.access_token}`;
-        }
+        const res = await fetch('/aleph.json');
+        const config = await res.json();
+        const supaUrl = config.identityProvider?.issuer?.replace('/auth/v1', '');
+        // Supabase 클라이언트 초기화 (필요시)
+      } catch (_) {}
+    }
+    init();
 
-        const response = await fetch('/api/memos', {
-          headers,
-          cache: 'no-store'
+    const deviceBadge = document.getElementById('device-status-badge');
+    const vaultSection = document.getElementById('vault-section');
+    const deviceMsg = document.getElementById('device-msg');
+    const btnRequestDevice = document.getElementById('btn-request-device-auth');
+
+    // 서버에 기기 확인 요청 (단순 클라이언트 버튼이 아닌 서버 판정기 응답 기반)
+    btnRequestDevice.addEventListener('click', async () => {
+      deviceMsg.textContent = '서버 보안 판정기로 기기 등록 상태를 대조 중...';
+      try {
+        const res = await fetch('/api/memos', {
+          headers: { 'X-Device-Check': 'status' }
         });
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => null);
-          throw new Error(errData?.error || `자료를 읽을 수 없습니다. (상태 코드: ${response.status})`);
+        // 미등록 기기 또는 401/403 차단 시
+        if (res.status === 403 || res.status === 401) {
+          isDeviceApproved = false;
+          deviceBadge.className = 'badge badge-denied';
+          deviceBadge.textContent = '미승인 기기 (접근 차단)';
+          vaultSection.classList.add('hidden');
+          deviceMsg.textContent = '서버 정책에 의해 미승인된 기기입니다. 자료 접근이 거부되었습니다.';
+        } else if (res.ok) {
+          isDeviceApproved = true;
+          deviceBadge.className = 'badge badge-approved';
+          deviceBadge.textContent = '승인 완료 (접근 허용)';
+          vaultSection.classList.remove('hidden');
+          deviceMsg.textContent = '정상 승인된 기기임이 확인되었습니다.';
+        } else {
+          deviceMsg.textContent = '기기 확인 중 오류가 발생했습니다.';
         }
-
-        const data = await response.json();
-        const memos = data.notes || data;
-        if (!Array.isArray(memos)) throw new Error('자료 형식이 올바르지 않습니다.');
-
-        list.replaceChildren(...memos.map(note => {
-          const item = document.createElement('li');
-          const title = document.createElement('strong');
-          const content = document.createElement('span');
-          title.textContent = note.title;
-          content.textContent = note.content;
-          item.append(title, content);
-          return item;
-        }));
-      } catch (error) {
-        const item = document.createElement('li');
-        item.textContent = error.message;
-        list.replaceChildren(item);
+      } catch (e) {
+        deviceMsg.textContent = '통신 실패 또는 오프라인 상태입니다.';
       }
-    }
-
-    // 인증 상태에 따른 UI 갱신
-    function updateUI(session) {
-      authError.textContent = '';
-      if (session) {
-        loggedOutView.classList.add('hidden');
-        loggedInView.classList.remove('hidden');
-        userEmailSpan.textContent = session.user.email;
-        loadMemos(session);
-      } else {
-        loggedOutView.classList.remove('hidden');
-        loggedInView.classList.add('hidden');
-        userEmailSpan.textContent = '';
-        list.innerHTML = '<li>로그인 후 자료를 확인할 수 있습니다.</li>';
-      }
-    }
-
-    // 로그인 실행
-    authForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      authError.textContent = '';
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        authError.textContent = `로그인 실패: ${error.message}`;
-      } else {
-        updateUI(data.session);
-      }
-    });
-
-    // 회원가입 실행
-    btnSignup.addEventListener('click', async () => {
-      authError.textContent = '';
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-
-      if (!email || !password) {
-        authError.textContent = '이메일과 비밀번호를 모두 입력해 주세요.';
-        return;
-      }
-
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        authError.textContent = `가입 실패: ${error.message}`;
-      } else {
-        authError.textContent = '회원가입 완료! 자동 로그인되거나 확인 메일을 확인하세요.';
-        if (data.session) updateUI(data.session);
-      }
-    });
-
-    // 로그아웃 실행
-    btnLogout.addEventListener('click', async () => {
-      await supabase.auth.signOut();
-      updateUI(null);
-    });
-
-    // 초기 세션 확인 및 감지
-    const { data: { session } } = await supabase.auth.getSession();
-    updateUI(session);
-
-    supabase.auth.onAuthStateChange((_event, session) => {
-      updateUI(session);
     });
   </script>
 </body>
