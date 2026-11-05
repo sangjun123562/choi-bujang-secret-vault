@@ -1,0 +1,16 @@
+{
+  "targetMemo": {
+    "id": "SAMPLE_NOTE_1",
+    "title": "과제",
+    "content": "실습용 가상 과제 기록",
+    "owner_id": "test_account_b",
+    "sha256": "4e73dbd6e5d8ecf6a7d5594b29c951df4b8be50dbd44eb6f39fa4be0a331dfce"
+  },
+  "policy": {
+    "step": 10,
+    "defaultDeny": true,
+    "notesListDenied": true,
+    "announcementsWriteDenied": true,
+    "sha256": "policy_v10_verified_hash"
+  }
+}
