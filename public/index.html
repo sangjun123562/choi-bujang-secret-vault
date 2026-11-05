@@ -33,14 +33,13 @@
     .offline-banner { display: none; padding: 12px; background: #78350f; color: #fef3c7; border-radius: 8px; margin-bottom: 20px; text-align: center; }
     .hidden { display: none !important; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <main>
     <div id="offline-banner" class="offline-banner">오프라인 상태입니다. 네트워크 연결을 확인해 주세요.</div>
     <div class="eyebrow">11단계 나만의 접속 앱</div>
     <h1>최 부장의 비밀 자료실</h1>
-    <p>서버와 정책 판정기의 기기 승인을 거친 기기만 안전하게 보호 자료를 열람할 수 있습니다.</p>
+    <p>설치 여부와 무관하게 서버와 정책 판정기의 엄격한 기기 승인을 거친 기기만 보호 자료를 열람할 수 있습니다.</p>
 
     <!-- 1. 계정 인증 영역 -->
     <div class="card" id="auth-section">
@@ -66,25 +65,25 @@
       </div>
     </div>
 
-    <!-- 2. 기기 승인 상태 영역 -->
+    <!-- 2. 기기 승인 상태 영역 (승인 전에는 자료를 노출하지 않음) -->
     <div class="card" id="device-section">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
           <strong>기기 보안 승인 상태</strong>
           <div style="font-size:14px; color:#bfd0e5; margin-top:4px;">
-            앱 설치 여부와 무관하게 서버의 기기 서명 및 승인 확인을 거쳐야 합니다.
+            앱 설치 표시나 클라이언트 버튼만으로는 승인되지 않으며, 서버의 정식 승인 응답이 필요합니다.
           </div>
         </div>
         <div id="device-status-badge" class="badge badge-denied">미승인 기기 (접근 차단)</div>
       </div>
 
       <div id="device-action-box" style="margin-top: 16px;">
-        <button class="btn-warning" id="btn-request-device-auth">기기 승인 확인 및 자료 불러오기</button>
-        <span id="device-msg" style="margin-left: 12px; font-size: 14px; color: #8ad8df;"></span>
+        <button class="btn-warning" id="btn-request-device-auth">기기 승인 확인</button>
+        <span id="device-msg" style="margin-left: 12px; font-size: 14px; color: #ff8b9e;">서버 승인 계약 대기 중 (승인 전 자료 격리)</span>
       </div>
     </div>
 
-    <!-- 3. 보호 자료실 영역 (승인 전 목록 비우고 숨김, 승인 후 렌더링) -->
+    <!-- 3. 보호 자료실 영역 (승인 전 목록을 비우고 완전히 숨김) -->
     <div id="vault-section" class="hidden">
       <h2>승인된 보호 메모 목록</h2>
       <ul id="memo-list"></ul>
@@ -92,7 +91,7 @@
   </main>
 
   <script>
-    // 1. 오프라인 상태 감지 UI
+    // 오프라인 상태 감지 UI
     function updateOnlineStatus() {
       const banner = document.getElementById('offline-banner');
       banner.style.display = navigator.onLine ? 'none' : 'block';
@@ -101,87 +100,49 @@
     window.addEventListener('offline', updateOnlineStatus);
     updateOnlineStatus();
 
-    let supabase = null;
-    let currentSession = null;
-
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    const authError = document.getElementById('auth-error');
-    const loggedOutView = document.getElementById('logged-out-view');
-    const loggedInView = document.getElementById('logged-in-view');
-    const userDisplay = document.getElementById('user-display');
     const deviceBadge = document.getElementById('device-status-badge');
     const vaultSection = document.getElementById('vault-section');
     const memoList = document.getElementById('memo-list');
     const deviceMsg = document.getElementById('device-msg');
     const btnRequestDevice = document.getElementById('btn-request-device-auth');
 
-    // 승인 전 목록 초기화 및 숨김 함수
-    function clearVault() {
+    // 승인 전 목록 격리: 목록을 완전히 비우고 숨김 유지
+    function clearAndHideVault() {
       deviceBadge.className = 'badge badge-denied';
       deviceBadge.textContent = '미승인 기기 (접근 차단)';
       vaultSection.classList.add('hidden');
       memoList.innerHTML = '';
     }
 
-    // 2. 서버 승인 확인과 자료 조회 분리 실행
-    async function checkDeviceAndLoadVault() {
-      const token = currentSession?.access_token;
-      if (!token) {
-        deviceMsg.textContent = '먼저 로그인해야 기기 승인을 확인할 수 있습니다.';
-        clearVault();
-        return;
-      }
+    // 서버 승인 확인과 자료 조회를 엄격히 분리
+    async function checkDeviceApproval() {
+      // 1. 승인 전에는 자료실을 열지 않고 비워둠
+      clearAndHideVault();
 
-      deviceMsg.textContent = '1단계: 서버에 기기 승인 상태 확인 중...';
-      clearVault();
-
-      try {
-        // [1단계: 서버 기기 승인 검증] 기존 허용된 GET /api/memos/:id 경로로 승인 검증
-        const verifyResp = await fetch('/api/memos/SAMPLE_NOTE_1', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        if (verifyResp.status === 403 || verifyResp.status === 401) {
-          clearVault();
-          deviceMsg.textContent = '서버 보안 정책에 의해 미승인된 기기/요청입니다. 자료 접근이 차단되었습니다.';
-          return;
-        }
-
-        // [2단계: 기기 승인 완료 처리]
-        deviceBadge.className = 'badge badge-approved';
-        deviceBadge.textContent = '승인 완료 (접근 허용)';
-        deviceMsg.textContent = '2단계: 승인 확인 완료. 보호 자료를 안전하게 불러오는 중...';
-
-        // [3단계: 승인된 기기에서 실제 자료 조회 및 제목/본문만 렌더링]
-        let notesToRender = [];
-        if (verifyResp.ok) {
-          const item = await verifyResp.json();
-          if (item && item.title) {
-            notesToRender.push(item);
-          }
-        }
-
-        renderNotes(notesToRender);
-        vaultSection.classList.remove('hidden');
-        deviceMsg.textContent = '승인된 기기에서 보호 자료 조회를 완료했습니다.';
-      } catch (err) {
-        clearVault();
-        deviceMsg.textContent = '기기 승인 확인 또는 통신 중 오류가 발생했습니다.';
-      }
+      // docs/DECIDER_REQUEST.md에 명시되었듯 현재 서버 승인 API 계약은 미제공 상태
+      // 임의로 메모 조회 API나 가상 URL을 호출해 상태 코드만으로 승인 처리하지 않음
+      deviceMsg.style.color = '#ff8b9e';
+      deviceMsg.textContent = '저장소 계약상 별도의 기기 승인 API가 아직 제공되지 않았습니다. 임의 승인 처리를 금지하며 대기 상태를 유지합니다.';
     }
 
-    // 실제 서버 응답의 제목(title)과 본문(body)만 안전하게 렌더링
+    // 서버가 명시적으로 승인 성공을 응답했을 때만 호출되는 안전한 자료 조회 및 렌더링 함수
+    async function loadVaultAfterApproval(token) {
+      if (!token) return;
+      try {
+        const res = await fetch('/api/memos/SAMPLE_NOTE_1', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const item = await res.json();
+          renderNotes(item ? [item] : []);
+          vaultSection.classList.remove('hidden');
+        }
+      } catch (_) {}
+    }
+
     function renderNotes(notes) {
       memoList.innerHTML = '';
-      if (!Array.isArray(notes) || notes.length === 0) {
-        const li = document.createElement('li');
-        li.textContent = '조회 가능한 메모가 없습니다.';
-        memoList.appendChild(li);
-        return;
-      }
+      if (!Array.isArray(notes) || notes.length === 0) return;
 
       for (const note of notes) {
         const li = document.createElement('li');
@@ -195,18 +156,8 @@
       }
     }
 
-    btnRequestDevice.addEventListener('click', checkDeviceAndLoadVault);
-
-    // Supabase Auth 초기화
-    async function initAuth() {
-      try {
-        const res = await fetch('/aleph.json');
-        const config = await res.json();
-        const supaUrl = config.identityProvider?.issuer?.replace('/auth/v1', '');
-        // Supabase 인스턴스 초기화가 필요한 경우 연결
-      } catch (_) {}
-    }
-    initAuth();
+    btnRequestDevice.addEventListener('click', checkDeviceApproval);
+    clearAndHideVault();
   </script>
 </body>
 </html>
