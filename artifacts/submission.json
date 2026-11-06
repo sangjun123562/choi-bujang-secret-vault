@@ -1,0 +1,45 @@
+{
+  "schema": "aleph.defense.submission.v2",
+  "step": 12,
+  "commit": "2ebeee13d267f74e658c2d9d488470e3f99da6e4",
+  "repoUrl": "https://github.com/sangjun123562/choi-bujang-secret-vault",
+  "changedFiles": [
+    "src/attack-check.mjs"
+  ],
+  "policyRules": [
+    "starter.deny",
+    "device_registered",
+    "step_up_required",
+    "zone_announcements_write_deny",
+    "zone_instructor_deny",
+    "zone_notes_list_deny",
+    "zone_allowed"
+  ],
+  "attackAttempts": [
+    {
+      "attackId": "unauthenticated-access-blocked",
+      "expected": "HTTP 401 or 403 Forbidden/Unauthorized",
+      "observed": "HTTP 401"
+    },
+    {
+      "attackId": "forged-token-access-blocked",
+      "expected": "HTTP 401 or 403 Forbidden/Unauthorized",
+      "observed": "HTTP 403"
+    }
+  ],
+  "explanation": "Supabase Auth를 연동하여 이메일과 비밀번호 기반 로그인 및 로그아웃 화면을 구현했습니다.\n서버 API에서 verify-login 모듈을 통해 JWT 인증 토큰을 검증하고 비인가 요청을 차단했습니다.\n인증된 사용자에 대해 메모를 추가, 수정, 삭제할 수 있는 CRUD 기능 및 nosniff 보안 헤더를 적용했습니다.",
+  "blockedAt": null,
+  "identityProvider": {
+    "issuer": "https://bpccctufaegnzlmoccpx.supabase.co/auth/v1",
+    "jwksUrl": "https://bpccctufaegnzlmoccpx.supabase.co/auth/v1/.well-known/jwks.json",
+    "audience": "authenticated"
+  },
+  "allowedRoutes": [
+    "GET /api/memos/:id",
+    "POST /api/memos",
+    "PUT /api/memos/:id",
+    "DELETE /api/memos/:id"
+  ],
+  "originalApiUrl": "https://bpccctufaegnzlmoccpx.supabase.co/rest/v1/memos",
+  "restoreRoute": "/api/memos"
+}
