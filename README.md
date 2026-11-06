@@ -49,3 +49,19 @@
 - **PWA 설정**: `public/manifest.json`을 연결하여 설치형 웹앱 메타데이터 및 오프라인 상태 안내 UI 구현.
 - **기기 보안 통제**: 단순히 앱을 설치했다는 상태만으로 기기를 신뢰하지 않으며, 서버 및 판정기의 인가 확인 전에는 자료실 목록을 절대 노출하지 않습니다.
 - **비밀값 보호**: 기기 비밀키나 세션 토큰을 브라우저 로컬 저장소에 평문으로 방치하지 않고 서버 기반의 상호 서명 검증을 유지합니다.
+
+## 12단계: 탈환 작전실 및 통합 보안 체계 운영 가이드
+
+### 1. 시스템 아키텍처 및 엔진 출처
+- **보안 엔진 출처**: 본 시스템의 접근 판정 및 위협 탐지 체계는 **ALEPH SDP 엔진**을 기반으로 설계되었습니다.
+- **핵심 모듈**:
+  - `src/decider.mjs`: ALEPH SDP 정책 판정 규칙(`allow_verified_device`, `deny_unregistered_device`, `stepup_risk_condition`, `block_blocked_subject`)
+  - `src/detect.mjs`: 실시간 행동 이상 탐지 (`burst_read` 120건 임계치 초과 탐지)
+  - `api/memos.js`: BOLA 방어 및 8단계 Default Deny 구역 차단 API
+  - `data/backup-vault.json`: 시험 계정 B 가상 메모 안전 복원 사본 및 무결성 해시
+
+### 2. 설치, 실행, 중지 및 복구 안내
+1. **설치 (Install)**
+   - Node.js 환경에서 저장소를 복제한 후 의존 패키지를 설치합니다:
+   ```bash
+   npm install

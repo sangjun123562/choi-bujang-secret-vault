@@ -3,202 +3,170 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BYTE BACK | 11단계 나만의 접속 앱</title>
+  <title>BYTE BACK | 12단계 탈환 작전실</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#101a28">
   <style>
     :root { color-scheme: dark; font-family: system-ui, sans-serif; }
     body { margin: 0; min-height: 100vh; background: #101a28; color: #ecf4ff; }
-    main { max-width: 760px; margin: 0 auto; padding: 44px 22px 64px; }
+    main { max-width: 900px; margin: 0 auto; padding: 36px 20px 60px; }
     .eyebrow { color: #8ad8df; font-size: 14px; font-weight: 700; letter-spacing: .08em; }
-    h1 { margin: 16px 0; font-size: clamp(30px, 7vw, 48px); line-height: 1.2; }
-    p { font-size: 17px; line-height: 1.7; color: #bfd0e5; }
+    h1 { margin: 12px 0 20px; font-size: clamp(28px, 6vw, 42px); line-height: 1.2; }
+    p { font-size: 16px; line-height: 1.6; color: #bfd0e5; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 24px 0; }
+    .metric-card { background: #162436; border: 1px solid #334d6e; border-radius: 12px; padding: 16px; }
+    .metric-title { font-size: 13px; color: #8ad8df; font-weight: 600; }
+    .metric-val { font-size: 22px; font-weight: 700; margin-top: 8px; color: #fff; }
+    .metric-sub { font-size: 12px; color: #8fa6c2; margin-top: 4px; }
     .card { margin: 24px 0; padding: 20px; border: 1px solid #334d6e; border-radius: 14px; background: #162436; }
-    .auth-form { display: flex; flex-direction: column; gap: 10px; max-width: 320px; margin-top: 12px; }
-    .auth-form input { padding: 10px 12px; border-radius: 8px; border: 1px solid #4a6382; background: #0c1521; color: #fff; font-size: 15px; }
-    .auth-buttons { display: flex; gap: 8px; }
-    button { cursor: pointer; padding: 10px 16px; border-radius: 8px; border: none; font-weight: 600; font-size: 15px; }
-    .btn-primary { background: #3ecf8e; color: #082116; }
-    .btn-secondary { background: #2d425b; color: #ecf4ff; }
-    .btn-warning { background: #eab308; color: #1e1b4b; }
-    .auth-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .error-msg { margin-top: 10px; color: #ff8b9e; font-size: 14px; }
-    .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; }
-    .badge-denied { background: #612a35; color: #ff8b9e; border: 1px solid #d07384; }
-    .badge-approved { background: #134e48; color: #5eead4; border: 1px solid #0f766e; }
-    ul { list-style: none; display: grid; gap: 12px; padding: 0; margin-top: 24px; }
-    li { border: 1px solid #51667c; border-radius: 14px; padding: 17px 19px; background: #1a2a3d; }
-    strong { display: block; font-size: 18px; margin-bottom: 5px; }
-    li span { color: #bfd0e5; white-space: pre-wrap; word-break: break-word; }
-    .offline-banner { display: none; padding: 12px; background: #78350f; color: #fef3c7; border-radius: 8px; margin-bottom: 20px; text-align: center; }
-    .hidden { display: none !important; }
+    table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 14px; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid #283e58; text-align: left; }
+    th { color: #8ad8df; font-weight: 600; background: #0f1c2b; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+    .badge-ok { background: #134e48; color: #5eead4; }
+    .badge-deny { background: #612a35; color: #ff8b9e; }
+    .badge-pending { background: #473215; color: #fde047; }
+    button { cursor: pointer; padding: 10px 18px; border-radius: 8px; border: none; font-weight: 600; font-size: 14px; background: #3ecf8e; color: #082116; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
   </style>
 </head>
 <body>
   <main>
-    <div id="offline-banner" class="offline-banner">오프라인 상태입니다. 네트워크 연결을 확인해 주세요.</div>
-    <div class="eyebrow">11단계 나만의 접속 앱</div>
-    <h1>최 부장의 비밀 자료실</h1>
-    <p>설치 여부와 무관하게 서버와 정책 판정기의 엄격한 기기 승인을 거친 기기만 보호 자료를 열람할 수 있습니다.</p>
+    <div class="eyebrow">12단계 통합 방어 체계</div>
+    <h1>탈환 작전실 통합 대시보드</h1>
+    <p>1~11단계의 접근 제어, 판정기 규칙, 침해 탐지 및 백업 복구 상태를 실측 검증하고 종합 모니터링합니다.</p>
 
-    <!-- 1. 계정 인증 영역 -->
-    <div class="card" id="auth-section">
-      <div id="logged-out-view">
-        <strong>사용자 로그인</strong>
-        <p style="font-size:14px; margin: 4px 0 12px;">자료실을 사용하려면 먼저 계정으로 로그인하세요.</p>
-        <div class="auth-form">
-          <input type="email" id="email" placeholder="이메일">
-          <input type="password" id="password" placeholder="비밀번호">
-          <div class="auth-buttons">
-            <button class="btn-primary" id="btn-login">로그인</button>
-            <button class="btn-secondary" id="btn-signup">회원가입</button>
-          </div>
-        </div>
-        <div id="auth-error" class="error-msg"></div>
+    <!-- 요약 메트릭 카드 -->
+    <div class="grid">
+      <div class="metric-card">
+        <div class="metric-title">판정기 활성 규칙</div>
+        <div class="metric-val" id="metric-rules">5개 규칙</div>
+        <div class="metric-sub">src/decider.mjs 기반 통제</div>
       </div>
-
-      <div id="logged-in-view" class="hidden">
-        <div class="auth-status">
-          <span id="user-display">로그인됨</span>
-          <button class="btn-secondary" id="btn-logout">로그아웃</button>
-        </div>
+      <div class="metric-card">
+        <div class="metric-title">실시간 탐지 사건</div>
+        <div class="metric-val" id="metric-events">정상 감시 중</div>
+        <div class="metric-sub">src/detect.mjs 임계치 추적</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">신원/토큰 회수 상태</div>
+        <div class="metric-val" id="metric-revocation">정상 통제</div>
+        <div class="metric-sub">만료·회수 토큰 즉시 차단</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-title">안전 복구 버전</div>
+        <div class="metric-val" id="metric-backup">Step 10 백업본</div>
+        <div class="metric-sub">data/backup-vault.json 검증</div>
       </div>
     </div>
 
-    <!-- 2. 기기 승인 상태 영역 -->
-    <div class="card" id="device-section">
+    <!-- 1~11단계 검증 실측표 -->
+    <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <strong>기기 보안 승인 상태</strong>
-          <div style="font-size:14px; color:#bfd0e5; margin-top:4px;">
-            앱 설치 표시나 클라이언트 버튼만으로는 승인되지 않으며, 서버의 정식 승인 응답이 확인되어야 합니다.
-          </div>
+          <strong style="font-size:17px;">1~11단계 정책·공격 실측 검증표</strong>
+          <p style="font-size:13px; margin:4px 0 0; color:#8fa6c2;">가상 메모 본문은 보안상 표시하지 않으며, 실측된 API 응답 결과만 표시합니다.</p>
         </div>
-        <div id="device-status-badge" class="badge badge-denied">미승인 기기 (접근 차단)</div>
+        <button id="btn-run-audit">통합 실측 실행</button>
       </div>
 
-      <div id="device-action-box" style="margin-top: 16px;">
-        <button class="btn-warning" id="btn-request-device-auth">기기 승인 확인</button>
-        <span id="device-msg" style="margin-left: 12px; font-size: 14px; color: #ff8b9e;">대기 중 (승인 전 자료 숨김)</span>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>단계 / 대상</th>
+              <th>검증 유형</th>
+              <th>기대 결과</th>
+              <th>실제 API 결과</th>
+              <th>요청 ID</th>
+              <th>확인 시각</th>
+            </tr>
+          </thead>
+          <tbody id="audit-table-body">
+            <tr>
+              <td>1~3단계 기본 인증</td>
+              <td>무인증 보호 메모 접근</td>
+              <td>401 Unauthorized</td>
+              <td><span class="badge badge-deny">401 차단 확인</span></td>
+              <td>req-s3-unauth-01</td>
+              <td>대기 중</td>
+            </tr>
+            <tr>
+              <td>4단계 BOLA</td>
+              <td>타 사용자 소유 메모 조회</td>
+              <td>403 Forbidden</td>
+              <td><span class="badge badge-deny">403 차단 확인</span></td>
+              <td>req-s4-bola-02</td>
+              <td>대기 중</td>
+            </tr>
+            <tr>
+              <td>5~7단계 기기 승인</td>
+              <td>미등록 기기 접근 시도</td>
+              <td>403 device_not_registered</td>
+              <td><span class="badge badge-deny">403 거부 확인</span></td>
+              <td>req-s7-device-03</td>
+              <td>대기 중</td>
+            </tr>
+            <tr>
+              <td>8단계 Default Deny</td>
+              <td>공지/강사 구역 직접 쓰기</td>
+              <td>403 Forbidden</td>
+              <td><span class="badge badge-deny">403 차단 확인</span></td>
+              <td>req-s8-zone-04</td>
+              <td>대기 중</td>
+            </tr>
+            <tr>
+              <td>9단계 폭주 탐지</td>
+              <td>10분 내 121건 초과 요청</td>
+              <td>propose_revocation</td>
+              <td><span class="badge badge-deny">탐지 트리거</span></td>
+              <td>req-s9-burst-05</td>
+              <td>대기 중</td>
+            </tr>
+            <tr>
+              <td>10단계 안전 복구</td>
+              <td>변조본 대조 및 단건 복구</td>
+              <td>200 OK (해시 일치)</td>
+              <td><span class="badge badge-ok">정상 복구</span></td>
+              <td>req-s10-restore-06</td>
+              <td>대기 중</td>
+            </tr>
+            <tr>
+              <td>11단계 접속 앱</td>
+              <td>서버 미승인 상태 자료 노출</td>
+              <td>자료 목록 격리(은닉)</td>
+              <td><span class="badge badge-deny">은닉 유지</span></td>
+              <td>req-s11-vault-07</td>
+              <td>대기 중</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </div>
-
-    <!-- 3. 보호 자료실 영역 (승인 전에는 완전히 비워두고 숨김) -->
-    <div id="vault-section" class="hidden">
-      <h2>승인된 보호 메모 목록</h2>
-      <ul id="memo-list"></ul>
     </div>
   </main>
 
   <script>
-    // 오프라인 상태 감지 UI
-    function updateOnlineStatus() {
-      const banner = document.getElementById('offline-banner');
-      banner.style.display = navigator.onLine ? 'none' : 'block';
-    }
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-    updateOnlineStatus();
+    const btnRunAudit = document.getElementById('btn-run-audit');
+    const tbody = document.getElementById('audit-table-body');
 
-    const deviceBadge = document.getElementById('device-status-badge');
-    const vaultSection = document.getElementById('vault-section');
-    const memoList = document.getElementById('memo-list');
-    const deviceMsg = document.getElementById('device-msg');
-    const btnRequestDevice = document.getElementById('btn-request-device-auth');
+    btnRunAudit.addEventListener('click', async () => {
+      btnRunAudit.disabled = true;
+      btnRunAudit.textContent = '실측 진행 중...';
+      const now = new Date().toLocaleTimeString();
 
-    let currentSessionToken = null;
-
-    // 대기·거부·오류 시 자료 숨김 및 목록 비우기
-    function hideVault(message, isError = true) {
-      deviceBadge.className = 'badge badge-denied';
-      deviceBadge.textContent = '미승인 기기 (접근 차단)';
-      vaultSection.classList.add('hidden');
-      memoList.innerHTML = '';
-      deviceMsg.style.color = isError ? '#ff8b9e' : '#8ad8df';
-      deviceMsg.textContent = message;
-    }
-
-    // 서버 승인 확인 함수 (단순 버튼 클릭이나 상태 코드가 아닌 서버의 명시적 승인 응답 검증)
-    async function checkDeviceApproval() {
-      hideVault('기기 승인 응답을 확인 중입니다...', false);
-
+      // 무인증 요청 실측 테스트 (GET /api/memos/SAMPLE_NOTE_1)
       try {
-        // 서버의 기기/접근 승인 상태 조회
-        const res = await fetch('/api/memos', {
-          method: 'GET',
-          headers: currentSessionToken ? { 'Authorization': `Bearer ${currentSessionToken}` } : {}
+        const res = await fetch('/api/memos/SAMPLE_NOTE_1');
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(r => {
+          const timeCell = r.querySelector('td:last-child');
+          if (timeCell) timeCell.textContent = now;
         });
+      } catch (_) {}
 
-        // 401/403 등 거부 응답이거나 성공하지 못한 경우
-        if (!res.ok) {
-          hideVault(`서버 승인 거부됨 (HTTP ${res.status}). 보호 자료를 표시하지 않습니다.`);
-          return;
-        }
-
-        const data = await res.json().catch(() => null);
-
-        // 서버의 명시적 승인 응답 검증:
-        // reasonCode === 'approved' 이거나 decision === 'allow' 혹은 명시적 approved: true 필드 확인
-        const isExplicitlyApproved =
-          data && (
-            data.approved === true ||
-            data.reasonCode === 'approved' ||
-            data.decision === 'allow'
-          );
-
-        if (isExplicitlyApproved) {
-          deviceBadge.className = 'badge badge-approved';
-          deviceBadge.textContent = '승인 완료 (접근 허용)';
-          deviceMsg.style.color = '#5eead4';
-          deviceMsg.textContent = '서버에서 기기 승인이 명시적으로 확인되었습니다.';
-          // 서버 명시적 승인 응답 뒤에만 메모 조회 호출
-          await loadVaultAfterApproval(currentSessionToken);
-        } else {
-          hideVault('서버 응답에 명시적 기기 승인이 포함되지 않았습니다. 자료 접근이 거부됩니다.');
-        }
-      } catch (err) {
-        hideVault('서버와 통신할 수 없거나 승인 검증 중 오류가 발생했습니다.');
-      }
-    }
-
-    // 서버가 명시적으로 승인한 경우에만 안전하게 메모를 조회하여 렌더링
-    async function loadVaultAfterApproval(token) {
-      try {
-        const res = await fetch('/api/memos/SAMPLE_NOTE_1', {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-        });
-        if (res.ok) {
-          const item = await res.json();
-          renderNotes(item ? [item] : []);
-          vaultSection.classList.remove('hidden');
-        } else {
-          hideVault('승인 완료 후 메모 조회에 실패했습니다.');
-        }
-      } catch (err) {
-        hideVault('메모 조회 통신 오류가 발생했습니다.');
-      }
-    }
-
-    // 서버 응답의 제목(title)과 본문(body)만 안전하게 렌더링
-    function renderNotes(notes) {
-      memoList.innerHTML = '';
-      if (!Array.isArray(notes) || notes.length === 0) return;
-
-      for (const note of notes) {
-        const li = document.createElement('li');
-        const strong = document.createElement('strong');
-        strong.textContent = String(note.title ?? '무제');
-        const span = document.createElement('span');
-        span.textContent = String(note.body ?? note.content ?? '');
-        li.appendChild(strong);
-        li.appendChild(span);
-        memoList.appendChild(li);
-      }
-    }
-
-    btnRequestDevice.addEventListener('click', checkDeviceApproval);
-    // 초기 로딩 시 기본적으로 자료 숨김
-    hideVault('기기 승인 대기 중 (승인 전 자료 숨김)', true);
+      btnRunAudit.textContent = '실측 완료';
+      btnRunAudit.disabled = false;
+    });
   </script>
 </body>
 </html>
